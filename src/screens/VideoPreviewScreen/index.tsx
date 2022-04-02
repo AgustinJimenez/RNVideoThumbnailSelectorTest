@@ -5,9 +5,11 @@ import Video, {OnLoadData} from 'react-native-video';
 import styles from './styles';
 import {Slider as RNSlider} from '@miblanchard/react-native-slider';
 import {createThumbnail} from 'react-native-create-thumbnail';
+import RNFS from 'react-native-fs';
 
 const testVideoUrl =
   'https://player.vimeo.com/external/592772975.sd.mp4?s=1ace120228a4ecb52f623fb714b52ffb1339fac8&profile_id=165&oauth2_token_id=57447761';
+const testVideoFilePath = `${RNFS.DocumentDirectoryPath}/tmp.mp4`;
 
 const Track = ({videoDuration}: any) => {
   const [thumbnailImgUris, setThumbnailImgUris] = useState<string[]>([]);
@@ -19,7 +21,7 @@ const Track = ({videoDuration}: any) => {
     let uris = [];
     for (let t = 0; t < videoDurationInMs; t += thumbnailTimeRange) {
       const {path} = await createThumbnail({
-        url: testVideoUrl,
+        url: testVideoFilePath,
         timeStamp: +t,
       });
       uris.push(path);
@@ -85,6 +87,7 @@ const Slider = ({
 
 const VideoPreviewScreen: React.FC = ({}) => {
   const videoRef = useRef();
+  const [videoIsLoad, setVideoIsLoad] = useState(false);
   const [videoInfo, setVideoInfo] = useState({
     currentTime: 0,
     playableDuration: 0,
@@ -106,7 +109,7 @@ const VideoPreviewScreen: React.FC = ({}) => {
   };
 
   const videoProps = {
-    source: {uri: testVideoUrl},
+    source: {uri: testVideoFilePath},
     currentTime: videoInfo.currentTime,
     style: styles.videoContainer,
     muted: true,
@@ -114,6 +117,26 @@ const VideoPreviewScreen: React.FC = ({}) => {
     resizeMode: 'stretch',
     ref: videoRef,
   };
+
+  const init = async () => {
+    const file = await RNFS.exists(testVideoFilePath);
+    if (!file) {
+      await RNFS.downloadFile({
+        fromUrl: testVideoUrl,
+        toFile: testVideoFilePath,
+      }).promise;
+    }
+
+    setVideoIsLoad(true);
+  };
+
+  useEffect(() => {
+    init();
+  }, []);
+
+  if (!videoIsLoad) {
+    return null;
+  }
 
   return (
     <>
